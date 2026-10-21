@@ -63,7 +63,7 @@ export function RecordForm({
               : field.type === "select" ? <select id={`field-${field.name}`} className="select-control" style={{ width: "100%" }} required={field.required} value={values[field.name] ?? ""} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}><option value="">Select {field.label.toLowerCase()}</option>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select>
                 : <input id={`field-${field.name}`} className="input-control" type={field.type ?? "text"} required={field.required} value={values[field.name] ?? ""} placeholder={field.placeholder} onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))} />}
           </div>)}</div>
-          <p className="field-hint">Demo-only form. Changes stay in this browser session and are not sent to a server.</p>
+          <p className="field-hint">Changes are saved to this CRM workspace.</p>
         </div>
         <div className="modal-footer"><button className="button" type="button" onClick={onClose}>Cancel</button><button className="button button-primary" type="submit">{submitLabel}</button></div>
       </form>

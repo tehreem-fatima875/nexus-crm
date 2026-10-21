@@ -33,6 +33,10 @@
 * { box-sizing: border-box; }
 html { min-width: 320px; background: var(--page); }
 body { margin: 0; color: var(--ink); background: var(--page); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+
+.storage-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; padding: 12px 14px; border: 1px solid #e7c7c1; border-radius: var(--radius); background: #fff8f6; color: #823d34; }
+.storage-error .button { flex: 0 0 auto; }
+.storage-saving { margin: 0 0 12px; color: var(--green-dark); font-size: 12px; }
 button, input, select, textarea { font: inherit; }
 button { color: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgb(22 101 52 / 27%); outline-offset: 2px; }
@@ -114,6 +118,7 @@ button { cursor: pointer; }
 .profile-menu-person strong { font-size: 11px; }
 .profile-menu-person small { margin-top: 2px; color: var(--muted); font-size: 10px; }
 .profile-popover > a { display: block; padding: 10px 7px; color: var(--green); font-size: 11px; font-weight: 600; }
+.profile-popover > button { display: block; width: 100%; padding: 10px 7px; border: 0; color: var(--green); background: transparent; font-size: 11px; font-weight: 600; text-align: left; }
 .profile-popover > p { margin: 0; padding: 7px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
 
 .main-content { width: 100%; max-width: 1560px; flex: 1; margin: 0 auto; padding: 27px 32px 44px; }
@@ -240,6 +245,15 @@ button { cursor: pointer; }
 .modal-body { padding: 18px 20px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 20px; border-top: 1px solid var(--line); }
 .form-error { margin: 0 0 12px; padding: 9px 10px; border: 1px solid #f1d2d0; border-radius: 5px; color: #a13f3c; background: #fff4f2; font-size: 10px; }
+.login-page { display: grid; min-height: 100vh; place-items: center; padding: 24px; background: var(--page); }
+.login-card { width: min(390px, 100%); padding: 25px; }
+.login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; }
+.login-brand strong { display: block; font-size: 17px; font-weight: 750; letter-spacing: -.2px; line-height: 1.15; }
+.login-brand small { display: block; margin-top: 3px; color: var(--subtle); font-size: 8px; font-weight: 700; letter-spacing: 1.4px; }
+.login-card h1 { margin: 4px 0 0; font-size: 22px; }
+.login-form { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+.login-form .button { justify-content: center; min-height: 38px; }
+.login-form .form-error { margin: 0; }
 .record-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(250px, .8fr); gap: 16px; }
 .record-main, .record-aside { display: flex; min-width: 0; flex-direction: column; gap: 15px; }
 .record-hero { display: flex; align-items: flex-start; gap: 13px; }

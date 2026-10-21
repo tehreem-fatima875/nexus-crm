@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, Search } from "luc
 import { RecordForm, type FormField } from "@/components/shared/record-form";
 import { useDemoStore } from "@/components/shared/demo-provider";
 import { Avatar, Badge, PageTitle } from "@/components/shared/ui";
-import { companyName, dateLabel, ownerName, shortDate } from "@/lib/format";
+import { companyName, dateLabel, leadCompanyName, ownerName, shortDate } from "@/lib/format";
 import type { Company, Contact, Lead, LeadStatus } from "@/types/crm";
 
 export type RecordKind = "leads" | "contacts" | "companies";
@@ -22,7 +22,7 @@ const statusOptions = ["New", "Contacted", "Qualified", "Proposal", "Won", "Lost
 export function getRecordFields(kind: RecordKind, companyOptions: string[], ownerOptions: string[]): FormField[] {
   if (kind === "leads") return [
     { name: "name", label: "Lead name", required: true }, { name: "email", label: "Email", type: "email", required: true },
-    { name: "companyName", label: "Company", type: "select", required: true, options: companyOptions }, { name: "phone", label: "Phone", type: "tel" },
+    { name: "companyName", label: "Company", required: true }, { name: "phone", label: "Phone", type: "tel" },
     { name: "service", label: "Service requested", type: "select", required: true, options: ["Web design", "Web development", "E-commerce development", "Digital marketing", "SEO", "Paid media", "Brand strategy", "Analytics"] },
     { name: "source", label: "Lead source", type: "select", required: true, options: ["Referral", "Website", "LinkedIn", "Content", "Event", "Organic search", "Partner referral"] },
     { name: "status", label: "Status", type: "select", required: true, options: statusOptions }, { name: "ownerName", label: "Owner", type: "select", required: true, options: ownerOptions },
@@ -62,7 +62,7 @@ export function RecordWorkspace({ kind, initialCreate = false }: { kind: RecordK
     const rows = allRows.filter((record) => {
       if (kind === "leads") {
         const lead = record as Lead;
-        return (!term || `${lead.name} ${lead.email} ${companyName(data, lead.companyId)} ${lead.service}`.toLowerCase().includes(term))
+        return (!term || `${lead.name} ${lead.email} ${leadCompanyName(data, lead)} ${lead.service}`.toLowerCase().includes(term))
           && (status === "All statuses" || lead.status === status)
           && (source === "All sources" || lead.source === source)
           && (owner === "All owners" || ownerName(data, lead.ownerId) === owner)
@@ -97,10 +97,14 @@ export function RecordWorkspace({ kind, initialCreate = false }: { kind: RecordK
 
   function createRecord(values: Record<string, string>) {
     const id = `${kind.slice(0, 2)}${Date.now().toString(36)}`;
-    const companyId = data.companies.find((item) => item.name === values.companyName)?.id ?? data.companies[0]?.id ?? "";
+    const typedCompanyName = values.companyName?.trim() ?? "";
+    const matchedCompany = kind === "leads"
+      ? data.companies.find((item) => item.name.trim().toLowerCase() === typedCompanyName.toLowerCase())
+      : data.companies.find((item) => item.name === values.companyName);
+    const companyId = matchedCompany?.id ?? (kind === "leads" ? "" : data.companies[0]?.id ?? "");
     const ownerId = data.owners.find((item) => item.name === values.ownerName)?.id ?? data.owners[0]?.id ?? "";
     if (kind === "leads") {
-      const lead: Lead = { id, name: values.name, email: values.email, phone: values.phone ?? "", companyId, service: values.service, source: values.source, status: (values.status || "New") as LeadStatus, score: 50, ownerId, createdAt: new Date().toISOString().slice(0, 10), budget: values.budget ?? "Not shared", requirements: values.requirements ?? "", notes: [] };
+      const lead: Lead = { id, name: values.name, email: values.email, phone: values.phone ?? "", companyId, companyName: typedCompanyName, service: values.service, source: values.source, status: (values.status || "New") as LeadStatus, score: 50, ownerId, createdAt: new Date().toISOString().slice(0, 10), budget: values.budget ?? "Not shared", requirements: values.requirements ?? "", notes: [] };
       setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
     } else if (kind === "contacts") {
       const contact: Contact = { id, name: values.name, email: values.email, phone: values.phone ?? "", role: values.role, companyId, source: values.source || "Referral", ownerId, notes: values.notes ?? "" };
@@ -119,7 +123,7 @@ export function RecordWorkspace({ kind, initialCreate = false }: { kind: RecordK
   }
 
   return <div className="page-content">
-    <PageTitle eyebrow={pageConfig.eyebrow} title={pageConfig.title} description={`${pageConfig.description} Sample records only.`} actions={<button className="button button-primary" onClick={() => setFormOpen(true)}><Plus size={14} />Add {pageConfig.singular}</button>} />
+    <PageTitle eyebrow={pageConfig.eyebrow} title={pageConfig.title} description={pageConfig.description} actions={<button className="button button-primary" onClick={() => setFormOpen(true)}><Plus size={14} />Add {pageConfig.singular}</button>} />
     <section className="panel">
       <div className="table-toolbar">
         <label className="search-control"><Search size={14} /><input className="input-control" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={kind === "leads" ? "Search name, company, email, service..." : `Search ${pageConfig.title.toLowerCase()}...`} aria-label={`Search ${pageConfig.title.toLowerCase()}`} /></label>
@@ -133,13 +137,13 @@ export function RecordWorkspace({ kind, initialCreate = false }: { kind: RecordK
         <label className="filter-control"><span className="sr-only">Filter by owner</span><select className="select-control" value={owner} onChange={(event) => { setOwner(event.target.value); setPage(1); }}><option>All owners</option>{data.owners.map((item) => <option key={item.id}>{item.name}</option>)}</select></label>
       </div>
       <div className="table-wrap"><table className="data-table">
-        {kind === "leads" && <><thead><tr><th>{sortButton("Lead", "name")}</th><th>Company</th><th>{sortButton("Service", "service")}</th><th>Source</th><th>{sortButton("Status", "status")}</th><th>{sortButton("Score", "score")}</th><th>Owner</th><th>{sortButton("Created", "createdAt")}</th></tr></thead><tbody>{(visible as Lead[]).map((lead) => <tr key={lead.id}><td><Link className="table-link" href={`/leads/${lead.id}`}>{lead.name}</Link><div className="table-secondary">{lead.email}</div></td><td>{companyName(data, lead.companyId)}</td><td>{lead.service}</td><td>{lead.source}</td><td><Badge tone={lead.status}>{lead.status}</Badge></td><td><span className="score-cell">{lead.score}<span className="score-track"><span style={{ width: `${lead.score}%` }} /></span></span></td><td><span className="table-person"><Avatar initials={data.owners.find((item) => item.id === lead.ownerId)?.initials ?? "--"} color={data.owners.find((item) => item.id === lead.ownerId)?.color} size="small" />{ownerName(data, lead.ownerId)}</span></td><td>{dateLabel(lead.createdAt)}</td></tr>)}</tbody></>}
+        {kind === "leads" && <><thead><tr><th>{sortButton("Lead", "name")}</th><th>Company</th><th>{sortButton("Service", "service")}</th><th>Source</th><th>{sortButton("Status", "status")}</th><th>{sortButton("Score", "score")}</th><th>Owner</th><th>{sortButton("Created", "createdAt")}</th></tr></thead><tbody>{(visible as Lead[]).map((lead) => <tr key={lead.id}><td><Link className="table-link" href={`/leads/${lead.id}`}>{lead.name}</Link><div className="table-secondary">{lead.email}</div></td><td>{leadCompanyName(data, lead)}</td><td>{lead.service}</td><td>{lead.source}</td><td><Badge tone={lead.status}>{lead.status}</Badge></td><td><span className="score-cell">{lead.score}<span className="score-track"><span style={{ width: `${lead.score}%` }} /></span></span></td><td><span className="table-person"><Avatar initials={data.owners.find((item) => item.id === lead.ownerId)?.initials ?? "--"} color={data.owners.find((item) => item.id === lead.ownerId)?.color} size="small" />{ownerName(data, lead.ownerId)}</span></td><td>{dateLabel(lead.createdAt)}</td></tr>)}</tbody></>}
         {kind === "contacts" && <><thead><tr><th>{sortButton("Contact", "name")}</th><th>Company</th><th>Role</th><th>Email</th><th>Phone</th><th>Source</th><th>Owner</th></tr></thead><tbody>{(visible as Contact[]).map((contact) => <tr key={contact.id}><td><Link className="table-link" href={`/contacts/${contact.id}`}>{contact.name}</Link></td><td><Link className="text-link" href={`/companies/${contact.companyId}`}>{companyName(data, contact.companyId)}</Link></td><td>{contact.role}</td><td><a className="table-link" href={`mailto:${contact.email}`}>{contact.email}</a></td><td>{contact.phone}</td><td>{contact.source}</td><td><span className="table-person"><Avatar initials={data.owners.find((item) => item.id === contact.ownerId)?.initials ?? "--"} color={data.owners.find((item) => item.id === contact.ownerId)?.color} size="small" />{ownerName(data, contact.ownerId)}</span></td></tr>)}</tbody></>}
         {kind === "companies" && <><thead><tr><th>{sortButton("Company", "name")}</th><th>{sortButton("Industry", "industry")}</th><th>Website</th><th>Size</th><th>Contacts</th><th>Open deals</th><th>Owner</th><th>Relationship</th></tr></thead><tbody>{(visible as Company[]).map((account) => <tr key={account.id}><td><Link className="table-link" href={`/companies/${account.id}`}>{account.name}</Link><div className="table-secondary">{account.location}</div></td><td>{account.industry}</td><td><a className="text-link" href={`https://${account.website}`} target="_blank" rel="noreferrer">{account.website}</a></td><td>{account.size}</td><td>{data.contacts.filter((item) => item.companyId === account.id).length}</td><td>{data.deals.filter((item) => item.companyId === account.id && !["Won", "Lost"].includes(item.stage)).length}</td><td>{ownerName(data, account.ownerId)}</td><td><Badge tone={account.client ? "Client" : "New"}>{account.client ? "Client" : "Prospect"}</Badge></td></tr>)}</tbody></>}
       </table>{visible.length === 0 && <div className="empty-state"><span className="empty-mark"><Search size={15} /></span><h3>No {pageConfig.title.toLowerCase()} match</h3><p>Try adjusting the search or filters, or add a new {pageConfig.singular}.</p></div>}</div>
       <div className="table-footer"><span>{filtered.length ? `Showing ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtered.length)} of ${filtered.length} ${pageConfig.title.toLowerCase()}` : `0 ${pageConfig.title.toLowerCase()}`}</span><div className="pagination"><label className="filter-control"><span>Rows</span><select className="select-control" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} aria-label="Rows per page"><option value={6}>6</option><option value={10}>10</option><option value={20}>20</option></select></label><button aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((current) => Math.max(current - 1, 1))}><ChevronLeft size={14} /></button><span>Page {page} of {pageCount}</span><button aria-label="Next page" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(current + 1, pageCount))}><ChevronRight size={14} /></button></div></div>
     </section>
-    <p className="field-hint">Sample data only · New records are stored in memory for this browser session.</p>
+    <p className="field-hint">Records are saved to the CRM database.</p>
     {formOpen && <RecordForm title={`Add ${pageConfig.singular}`} description={`Create a sample ${pageConfig.singular} in this demo workspace.`} fields={fields} submitLabel={`Create ${pageConfig.singular}`} onClose={() => setFormOpen(false)} onSubmit={createRecord} />}
   </div>;
 }

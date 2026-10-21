@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { useDemoStore } from "@/components/shared/demo-provider";
 import { Avatar } from "@/components/shared/ui";
-import { companyName } from "@/lib/format";
+import { RouteFallback } from "@/components/shared/route-fallback";
+import { companyName, leadCompanyName } from "@/lib/format";
 
 const groups = [
   { label: "Workspace", items: [{ label: "Dashboard", href: "/dashboard", icon: Home }] },
@@ -34,17 +35,18 @@ type SearchResult = { name: string; hint: string; href: string };
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data } = useDemoStore();
+  const { data, loading, saving, error, retry } = useDemoStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [menu, setMenu] = useState<"profile" | "notifications" | null>(null);
+  const [today, setToday] = useState("");
   const searchInput = useRef<HTMLInputElement>(null);
   const results = useMemo<SearchResult[]>(() => {
     const query = search.trim().toLowerCase();
     if (!query) return [];
     return [
-      ...data.leads.map((record) => ({ name: record.name, hint: `Lead · ${companyName(data, record.companyId)}`, href: `/leads/${record.id}` })),
+      ...data.leads.map((record) => ({ name: record.name, hint: `Lead · ${leadCompanyName(data, record)}`, href: `/leads/${record.id}` })),
       ...data.contacts.map((record) => ({ name: record.name, hint: `Contact · ${companyName(data, record.companyId)}`, href: `/contacts/${record.id}` })),
       ...data.companies.map((record) => ({ name: record.name, hint: `Company · ${record.industry}`, href: `/companies/${record.id}` })),
       ...data.deals.map((record) => ({ name: record.title, hint: `Deal · ${companyName(data, record.companyId)}`, href: `/deals/${record.id}` })),
@@ -53,9 +55,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [data, search]);
 
   const activeLabel = groups.flatMap((group) => group.items).find((item) => pathname.startsWith(item.href))?.label ?? "Dashboard";
-  const today = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date("2026-10-18T12:00:00"));
-
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setToday(new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date()));
+    }, 0);
+
     function openSearch(event: KeyboardEvent) {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -64,8 +68,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     }
     window.addEventListener("keydown", openSearch);
-    return () => window.removeEventListener("keydown", openSearch);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("keydown", openSearch);
+    };
   }, []);
+
+  if (pathname === "/login") return children;
 
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,7 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="nav-group-label">{group.label}</p>
           {group.items.map(({ label, href, icon: Icon }) => <Link key={href} href={href} onClick={() => setDrawerOpen(false)} className={`nav-link ${pathname.startsWith(href) ? "active" : ""}`} aria-current={pathname.startsWith(href) ? "page" : undefined}>
             <Icon size={17} strokeWidth={1.8} /><span>{label}</span>
-            {label === "Activities" && data.activities.filter((item) => item.status === "Overdue").length > 0 && <span className="nav-count">{data.activities.filter((item) => item.status === "Overdue").length}</span>}
+            {label === "Activities" && !loading && data.activities.filter((item) => item.status === "Overdue").length > 0 && <span className="nav-count">{data.activities.filter((item) => item.status === "Overdue").length}</span>}
           </Link>)}
         </div>)}
       </nav>
@@ -122,11 +131,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {menu === "notifications" && <div className="popover notification-popover"><div className="popover-heading"><strong>Follow-ups to review</strong><Link href="/activities" onClick={() => setMenu(null)}>View all</Link></div>{data.activities.filter((item) => item.status === "Overdue").slice(0, 3).map((item) => <Link href="/activities" key={item.id} className="notification-item" onClick={() => setMenu(null)}><span className="notification-alert" /><span><strong>{item.title}</strong><small>{item.dueAt.slice(0, 10)} · overdue</small></span></Link>)}{!data.activities.some((item) => item.status === "Overdue") && <p className="popover-empty">You’re all caught up.</p>}</div>}
           </div>
           <button className="topbar-avatar" aria-label="Open profile menu" aria-expanded={menu === "profile"} onClick={() => setMenu(menu === "profile" ? null : "profile")}><Avatar initials="MC" color="#c4e7d1" size="small" /></button>
-          {menu === "profile" && <div className="popover profile-popover"><div className="profile-menu-person"><Avatar initials="MC" color="#c4e7d1" /><span><strong>Maya Chen</strong><small>Demo workspace owner</small></span></div><Link href="/settings" onClick={() => setMenu(null)}>Workspace settings</Link><p>Demo session · changes reset on refresh</p></div>}
+          {menu === "profile" && <div className="popover profile-popover"><div className="profile-menu-person"><Avatar initials="MC" color="#c4e7d1" /><span><strong>Maya Chen</strong><small>Demo workspace owner</small></span></div><Link href="/settings" onClick={() => setMenu(null)}>Workspace settings</Link><p>Changes are saved to the CRM database.</p><button type="button" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.replace("/login"); }}>Sign out</button></div>}
         </div>
       </header>
-      <main className="main-content">{children}</main>
-      <footer className="app-footer"><span>Nexus CRM <span className="footer-dot">·</span> Demo workspace</span><span>Sample data only · No backend connected</span></footer>
+      <main className="main-content">
+        {error && <div className="storage-error" role="alert"><span>{error}</span><button className="button" type="button" onClick={() => void retry()}>Retry</button></div>}
+        {saving && <p className="storage-saving" role="status">Saving changes to the CRM database…</p>}
+        {loading && <RouteFallback />}
+        {children}
+      </main>
+      <footer className="app-footer"><span>Nexus CRM <span className="footer-dot">·</span> Demo workspace</span><span>MongoDB storage · Demo identity</span></footer>
     </div>
   </div>;
 }
