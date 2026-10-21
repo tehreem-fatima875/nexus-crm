@@ -5,19 +5,12 @@ A CRM workspace for web development and digital marketing agencies, built with t
 ## Local setup
 
 1. Install dependencies with `npm install`.
-2. Create a root `.env.local` file containing the MongoDB Atlas connection string:
+2. For local MongoDB-backed development, place `MONGODB_URI` in the ignored root `.env.local`. The app selects only the `nexus_crm` database. Keep the URI server-side.
+3. Start the development server with `npm run dev` and open `http://localhost:3000`. No sign-in is required. Bind development servers to loopback only; local development routes can write to the configured `nexus_crm` database.
 
-   ```env
-   MONGODB_URI=your-mongodb-atlas-connection-string
-   ```
+In production, the public demo uses the synthetic examples in `src/data/demo-data.ts`; its API does not read the configured MongoDB database. Public reads are allowed, and all create, update, and delete API requests return HTTP 403. This prevents visitors from seeing CRM records from MongoDB or changing them. The MongoDB connection helper remains server-only and is used by local development only.
 
-   The application always uses the `nexus_crm` database. Configure the Atlas database user with access only to that database. Keep `.env.local` private and never expose the URI to browser code.
-3. Start the development server bound to loopback with `npm run dev -- --hostname 127.0.0.1` and open `http://127.0.0.1:3000/login`.
-4. Sign in with the local demo account. The username defaults to `demo` and is shown in the login form; set `DEMO_USERNAME` in `.env.local` to use a different username. To set or reset the local password without echoing it in the terminal, run `npm run auth:reset-password`, enter a new password twice at the hidden prompts, and restart the development server. The reset command changes only `DEMO_PASSWORD` in the root `.env.local`; that file is git-ignored. For an exposed deployment, set server-side `DEMO_USERNAME`, `DEMO_PASSWORD` (at least 12 characters), and `DEMO_AUTH_SECRET` (at least 32 characters) before starting the production server. Never use the development defaults outside a loopback-only local demo.
-
-The login is a shared demo identity. Development defaults are provided only to make a loopback demo easy to run; production does not fall back to these values and requires all three authentication environment variables.
-
-The development-only `GET /api/db-test` endpoint checks connectivity without returning credentials. CRM collections and indexes are created as needed; initial sample CRM records are not copied into MongoDB. The MongoDB driver uses its standard TLS defaults, bounded connection/server-selection timeouts, connection pooling, and retryable reads/writes. Intermittent Atlas reachability can still depend on network access, DNS, and Atlas availability.
+For Netlify, connect the repository and deploy the Next.js app using the site's normal build configuration. No authentication or database environment variables are required for the public read-only demo. Do not add `MONGODB_URI` to the public deployment: production routes use fixture data and deny writes.
 
 ## CRM routes
 
@@ -32,15 +25,15 @@ The development-only `GET /api/db-test` endpoint checks connectivity without ret
 - `/ai-assistant` — planned AI workflows and editable user-authored drafts; no AI provider is connected
 - `/settings` — local demo preferences and informational team/role settings
 
-The CRM API provides list/create endpoints at `/api/crm/{leads,contacts,companies,deals,activities,projects}` and read/update/delete endpoints at `/api/crm/{collection}/{id}`. Request data is validated on the server, relationship references are checked, and deletion is rejected when another CRM record depends on the target.
+The production CRM API provides sample-data reads at `/api/crm` and `/api/crm/{leads,contacts,companies,deals,activities,projects}`, plus item reads at `/api/crm/{collection}/{id}`. Production create, update, and delete operations are intentionally disabled. Local development API routes retain MongoDB CRUD support.
 
-The existing sample owner list remains a fixed demo directory; the demo login is a single shared identity, not user/team management. CRM records are stored in MongoDB and remain after refresh. A fresh database starts with empty CRM collections; add companies first, then create contacts and deals that reference them. Leads can store a typed company name without making a company record; a matching existing company is linked.
+The production sample owner list and CRM records are fixed synthetic demo data. Changes made through forms are not persisted there; the API reports that the public demo is read-only. Local development forms continue using MongoDB persistence.
 
 ## Security and production status
 
-The demo has a shared username/password login, an eight-hour signed HttpOnly session cookie, and Next.js Proxy checks on application pages and APIs. It has no user accounts, password reset/MFA, rate limiting, role-based permissions, or tenant isolation. All signed-in demo users share the same `nexus_crm` data. This is a demonstration gate, not production-grade account security; do not use it for real customer data or treat it as a multi-tenant system.
+The public demo requires no account and exposes only synthetic sample data. CRM write endpoints are disabled. This is suitable for demonstration, not for handling private customer data or accepting public user submissions.
 
-Settings, team role selections, notification preferences, and display preferences remain page-local demo controls because there is no authenticated workspace/user model to scope them to. AI generation, summarization, and notification delivery are not connected.
+Settings, team role selections, notification preferences, and display preferences remain page-local demo controls because there is no authenticated workspace/user model to scope them to. AI generation, summarization, and notification delivery are not connected. The database-backed CRUD implementation is intentionally not active in this public read-only deployment.
 
 ## Checks
 

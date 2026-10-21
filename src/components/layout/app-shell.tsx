@@ -74,8 +74,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  if (pathname === "/login") return children;
-
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (results[0]) {
@@ -131,7 +129,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {menu === "notifications" && <div className="popover notification-popover"><div className="popover-heading"><strong>Follow-ups to review</strong><Link href="/activities" onClick={() => setMenu(null)}>View all</Link></div>{data.activities.filter((item) => item.status === "Overdue").slice(0, 3).map((item) => <Link href="/activities" key={item.id} className="notification-item" onClick={() => setMenu(null)}><span className="notification-alert" /><span><strong>{item.title}</strong><small>{item.dueAt.slice(0, 10)} · overdue</small></span></Link>)}{!data.activities.some((item) => item.status === "Overdue") && <p className="popover-empty">You’re all caught up.</p>}</div>}
           </div>
           <button className="topbar-avatar" aria-label="Open profile menu" aria-expanded={menu === "profile"} onClick={() => setMenu(menu === "profile" ? null : "profile")}><Avatar initials="MC" color="#c4e7d1" size="small" /></button>
-          {menu === "profile" && <div className="popover profile-popover"><div className="profile-menu-person"><Avatar initials="MC" color="#c4e7d1" /><span><strong>Maya Chen</strong><small>Demo workspace owner</small></span></div><Link href="/settings" onClick={() => setMenu(null)}>Workspace settings</Link><p>Changes are saved to the CRM database.</p><button type="button" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.replace("/login"); }}>Sign out</button></div>}
+          {menu === "profile" && <div className="popover profile-popover"><div className="profile-menu-person"><Avatar initials="MC" color="#c4e7d1" /><span><strong>Maya Chen</strong><small>Demo workspace owner</small></span></div><Link href="/settings" onClick={() => setMenu(null)}>Workspace settings</Link><p>The public demo is read-only; changes are not saved.</p></div>}
         </div>
       </header>
       <main className="main-content">
