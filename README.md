@@ -14,7 +14,7 @@ For Netlify, connect the repository and deploy the Next.js app using the site's 
 
 ## CRM routes
 
-- `/dashboard` — overview and analytics calculated from stored CRM records; the historical revenue chart remains illustrative.
+- `/dashboard` — overview and analytics calculated from the CRM records served to the Leads and Deals pages, including monthly won revenue by close date.
 - `/leads` and `/leads/[id]` — lead directory and lead records
 - `/contacts` and `/contacts/[id]` — contact directory and profiles
 - `/companies` and `/companies/[id]` — company directory and account profiles

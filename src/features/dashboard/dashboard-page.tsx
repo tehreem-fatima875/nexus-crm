@@ -12,7 +12,8 @@ import {
 } from "recharts";
 import { useDemoStore } from "@/components/shared/demo-provider";
 import { Badge, Card, SectionHeading } from "@/components/shared/ui";
-import { chartColors, demoRevenueTrend } from "@/data/demo-analytics";
+import { chartColors } from "@/data/demo-analytics";
+import { getDashboardMetrics } from "@/lib/dashboard-metrics";
 import { currency, leadCompanyName, ownerName, relativeDate, shortDate } from "@/lib/format";
 
 const periods = ["6 months", "3 months", "12 months"] as const;
@@ -27,6 +28,9 @@ export function DashboardPage() {
   const { data, setData } = useDemoStore();
   const [period, setPeriod] = useState<Period>("6 months");
   const [today, setToday] = useState("");
+  const periodMonths = period === "3 months" ? 3 : period === "6 months" ? 6 : 12;
+  const { activeDeals, wonDeals, overdue, qualified, conversion, sourceData, revenueData } =
+    getDashboardMetrics(data, periodMonths);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -34,19 +38,8 @@ export function DashboardPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
-  const activeDeals = data.deals.filter((deal) => !["Won", "Lost"].includes(deal.stage));
-  const wonDeals = data.deals.filter((deal) => deal.stage === "Won");
-  const overdue = data.activities.filter((activity) => activity.status === "Overdue");
-  const qualified = data.leads.filter((lead) => ["Qualified", "Proposal"].includes(lead.status));
-  const conversion = data.leads.length ? Math.round((wonDeals.length / data.leads.length) * 100) : 0;
   const stages = ["New Opportunity", "Qualified", "Proposal Sent", "Negotiation"] as const;
   const maxStageValue = Math.max(...stages.map((stage) => activeDeals.filter((deal) => deal.stage === stage).reduce((sum, deal) => sum + deal.value, 0)), 1);
-  const sourceCounts = data.leads.reduce<Record<string, number>>((counts, lead) => {
-    counts[lead.source] = (counts[lead.source] ?? 0) + 1;
-    return counts;
-  }, {});
-  const sourceData = Object.entries(sourceCounts).map(([name, value]) => ({ name, value }));
-  const revenueData = demoRevenueTrend.slice(-(period === "3 months" ? 3 : period === "6 months" ? 6 : 12));
   const tasks = data.activities.filter((item) => item.status !== "Completed").sort((a, b) => a.dueAt.localeCompare(b.dueAt)).slice(0, 4);
   const recentLeads = [...data.leads].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
   const recentActivity = [...data.activities].sort((a, b) => b.dueAt.localeCompare(a.dueAt)).slice(0, 4);
@@ -74,13 +67,13 @@ export function DashboardPage() {
     </div>)}</div>
     <div className="dashboard-chart">
       <Card className="chart-card">
-        <SectionHeading title="Revenue trend" detail="Illustrative monthly trend · USD" action={<select className="select-control" value={period} onChange={(event) => setPeriod(event.target.value as Period)} aria-label="Revenue chart date range">{periods.map((item) => <option key={item}>{item}</option>)}</select>} />
+        <SectionHeading title="Revenue trend" detail="Won deals by close date · USD" action={<select className="select-control" value={period} onChange={(event) => setPeriod(event.target.value as Period)} aria-label="Revenue chart date range">{periods.map((item) => <option key={item}>{item}</option>)}</select>} />
         <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenueData} margin={{ top: 8, right: 6, bottom: 0, left: -17 }}>
           <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#4d8a5f" stopOpacity={0.17} /><stop offset="100%" stopColor="#4d8a5f" stopOpacity={0.01} /></linearGradient></defs>
           <CartesianGrid vertical={false} stroke="#edf1ed" strokeDasharray="3 4" /><XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: "#89948b", fontSize: 9 }} tickMargin={9} /><YAxis tickLine={false} axisLine={false} tick={{ fill: "#89948b", fontSize: 9 }} tickFormatter={(value: number) => `$${value / 1000}k`} /><Tooltip content={<ChartTooltip />} />
-          <Area type="monotone" dataKey="revenue" name="Won revenue" stroke="#327548" strokeWidth={2.5} fill="url(#revenueFill)" activeDot={{ r: 4, strokeWidth: 0 }} /><Area type="monotone" dataKey="target" name="Sample target" stroke="#a9b8aa" strokeWidth={1.5} strokeDasharray="4 4" fill="transparent" />
+          <Area type="monotone" dataKey="revenue" name="Won revenue" stroke="#327548" strokeWidth={2.5} fill="url(#revenueFill)" activeDot={{ r: 4, strokeWidth: 0 }} />
         </AreaChart></ResponsiveContainer></div>
-        <div className="chart-legend"><span className="legend-item"><i className="legend-dot" style={{ background: "#327548" }} />Won revenue</span><span className="legend-item"><i className="legend-dot" style={{ background: "#a9b8aa" }} />Sample target</span><span className="legend-item">USD · monthly close date</span></div>
+        <div className="chart-legend"><span className="legend-item"><i className="legend-dot" style={{ background: "#327548" }} />Won revenue</span><span className="legend-item">CRM records · monthly close date</span></div>
       </Card>
       <Card>
         <SectionHeading title="Lead sources" detail="CRM leads by first touch" />
