@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Nexus CRM | Agency Workspace",
-  description: "A focused relationship workspace for agency teams. Sample data only.",
+  description: "A public CRM demo with analytics based on its MongoDB records.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

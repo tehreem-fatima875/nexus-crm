@@ -7,7 +7,7 @@ import {
   publicDemoReadOnlyMessage,
 } from "../src/lib/public-demo-policy.mjs";
 
-test("enables the read-only fixture mode only in production", () => {
+test("keeps the public CRM read-only in production", () => {
   const previousNodeEnv = process.env.NODE_ENV;
   try {
     process.env.NODE_ENV = "production";

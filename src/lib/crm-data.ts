@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Db, Document } from "mongodb";
-import { initialDemoData } from "@/data/demo-data";
+import { owners } from "@/data/owners";
 import type { Activity, Company, Contact, Deal, DemoData, Lead, Project, RecordCollection } from "@/types/crm";
 import {
   CrmConflictError,
@@ -22,7 +22,7 @@ export const recordCollections: RecordCollection[] = [
   "projects",
 ];
 
-const ownerIds = new Set(initialDemoData.owners.map((owner) => owner.id));
+const ownerIds = new Set(owners.map((owner) => owner.id));
 const collectionIndexes: Record<RecordCollection, string[]> = {
   leads: ["ownerId", "companyId", "status", "source"],
   contacts: ["ownerId", "companyId"],
@@ -67,7 +67,7 @@ export async function getAllCrmData(db: Db): Promise<DemoData> {
 
   return {
     ...records,
-    owners: initialDemoData.owners,
+    owners,
   };
 }
 

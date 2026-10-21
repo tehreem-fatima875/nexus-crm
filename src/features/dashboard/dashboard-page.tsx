@@ -11,8 +11,8 @@ import {
   Tooltip, XAxis, YAxis,
 } from "recharts";
 import { useDemoStore } from "@/components/shared/demo-provider";
-import { Badge, Card, SectionHeading } from "@/components/shared/ui";
-import { chartColors } from "@/data/demo-analytics";
+import { Badge, Card, EmptyState, SectionHeading } from "@/components/shared/ui";
+import { chartColors } from "@/data/chart-colors";
 import { getDashboardMetrics } from "@/lib/dashboard-metrics";
 import { currency, leadCompanyName, ownerName, relativeDate, shortDate } from "@/lib/format";
 
@@ -68,17 +68,17 @@ export function DashboardPage() {
     <div className="dashboard-chart">
       <Card className="chart-card">
         <SectionHeading title="Revenue trend" detail="Won deals by close date · USD" action={<select className="select-control" value={period} onChange={(event) => setPeriod(event.target.value as Period)} aria-label="Revenue chart date range">{periods.map((item) => <option key={item}>{item}</option>)}</select>} />
-        <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenueData} margin={{ top: 8, right: 6, bottom: 0, left: -17 }}>
+        {revenueData.some((point) => point.revenue > 0) ? <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenueData} margin={{ top: 8, right: 6, bottom: 0, left: -17 }}>
           <defs><linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#4d8a5f" stopOpacity={0.17} /><stop offset="100%" stopColor="#4d8a5f" stopOpacity={0.01} /></linearGradient></defs>
           <CartesianGrid vertical={false} stroke="#edf1ed" strokeDasharray="3 4" /><XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: "#89948b", fontSize: 9 }} tickMargin={9} /><YAxis tickLine={false} axisLine={false} tick={{ fill: "#89948b", fontSize: 9 }} tickFormatter={(value: number) => `$${value / 1000}k`} /><Tooltip content={<ChartTooltip />} />
           <Area type="monotone" dataKey="revenue" name="Won revenue" stroke="#327548" strokeWidth={2.5} fill="url(#revenueFill)" activeDot={{ r: 4, strokeWidth: 0 }} />
-        </AreaChart></ResponsiveContainer></div>
+        </AreaChart></ResponsiveContainer></div> : <EmptyState title="No closed-won deals in this period" detail="Won revenue will appear here when a deal is marked Won." />}
         <div className="chart-legend"><span className="legend-item"><i className="legend-dot" style={{ background: "#327548" }} />Won revenue</span><span className="legend-item">CRM records · monthly close date</span></div>
       </Card>
       <Card>
         <SectionHeading title="Lead sources" detail="CRM leads by first touch" />
-        <div className="chart-wrap" style={{ height: 150 }}><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={sourceData} dataKey="value" nameKey="name" innerRadius={46} outerRadius={68} paddingAngle={3} stroke="none">{sourceData.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}</Pie><Tooltip formatter={(value) => [`${value} leads`, "Count"]} /></PieChart></ResponsiveContainer></div>
-        <div className="source-list">{sourceData.slice(0, 5).map((source, index) => <div className="source-row" key={source.name}><i className="legend-dot" style={{ background: chartColors[index % chartColors.length] }} /><span>{source.name}</span><strong>{source.value}</strong><small>{Math.round(source.value / Math.max(data.leads.length, 1) * 100)}%</small></div>)}</div>
+        {sourceData.length ? <><div className="chart-wrap" style={{ height: 150 }}><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={sourceData} dataKey="value" nameKey="name" innerRadius={46} outerRadius={68} paddingAngle={3} stroke="none">{sourceData.map((entry, index) => <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />)}</Pie><Tooltip formatter={(value) => [`${value} leads`, "Count"]} /></PieChart></ResponsiveContainer></div>
+        <div className="source-list">{sourceData.slice(0, 5).map((source, index) => <div className="source-row" key={source.name}><i className="legend-dot" style={{ background: chartColors[index % chartColors.length] }} /><span>{source.name}</span><strong>{source.value}</strong><small>{Math.round(source.value / data.leads.length * 100)}%</small></div>)}</div></> : <EmptyState title="No leads yet" detail="Lead sources will appear when leads are added." />}
       </Card>
     </div>
     <div className="dashboard-grid">
@@ -87,17 +87,17 @@ export function DashboardPage() {
         <div className="chart-legend" style={{ marginTop: 18 }}><span className="legend-item">{activeDeals.length} open opportunities</span><span className="legend-item">{currency(activeDeals.reduce((sum, deal) => sum + deal.value, 0))} open value</span></div>
       </Card>
       <Card><SectionHeading title="Follow-ups" detail={`${overdue.length} overdue · ${tasks.length} next up`} action={<Link className="text-link" href="/activities">All activities <ArrowRight size={13} /></Link>} />
-        <div className="task-list">{tasks.map((task) => <label className="task-row" key={task.id}><input className="task-check" type="checkbox" aria-label={`Complete ${task.title}`} onChange={() => completeTask(task.id)} /><span className="task-copy"><strong>{task.title}</strong><p>{task.type} · {ownerName(data, task.ownerId)}</p></span><span className={`task-date ${task.status === "Overdue" ? "is-overdue" : ""}`}>{task.status === "Overdue" ? "Overdue" : relativeDate(task.dueAt)}</span></label>)}</div>
+        {tasks.length ? <div className="task-list">{tasks.map((task) => <label className="task-row" key={task.id}><input className="task-check" type="checkbox" aria-label={`Complete ${task.title}`} onChange={() => completeTask(task.id)} /><span className="task-copy"><strong>{task.title}</strong><p>{task.type} · {ownerName(data, task.ownerId)}</p></span><span className={`task-date ${task.status === "Overdue" ? "is-overdue" : ""}`}>{task.status === "Overdue" ? "Overdue" : relativeDate(task.dueAt)}</span></label>)}</div> : <EmptyState title="No follow-ups scheduled" detail="Tasks and activities will appear here." />}
       </Card>
     </div>
     <div className="dashboard-grid">
-      <Card><SectionHeading title="Recent leads" detail="The latest activity in your sample pipeline" action={<Link className="text-link" href="/leads">View all leads <ArrowRight size={13} /></Link>} />
-        <div className="table-wrap"><table className="data-table"><thead><tr><th>Lead</th><th>Company</th><th>Service</th><th>Status</th><th>Score</th><th>Added</th></tr></thead><tbody>{recentLeads.map((lead) => <tr key={lead.id}><td><Link className="table-link" href={`/leads/${lead.id}`}>{lead.name}</Link><div className="table-secondary">{lead.email}</div></td><td>{leadCompanyName(data, lead)}</td><td>{lead.service}</td><td><Badge tone={lead.status}>{lead.status}</Badge></td><td><span className="score-cell"><span>{lead.score}</span><span className="score-track"><span style={{ width: `${lead.score}%` }} /></span></span></td><td>{shortDate(lead.createdAt)}</td></tr>)}</tbody></table></div>
+      <Card><SectionHeading title="Recent leads" detail="The latest activity in your CRM pipeline" action={<Link className="text-link" href="/leads">View all leads <ArrowRight size={13} /></Link>} />
+        {recentLeads.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Lead</th><th>Company</th><th>Service</th><th>Status</th><th>Score</th><th>Added</th></tr></thead><tbody>{recentLeads.map((lead) => <tr key={lead.id}><td><Link className="table-link" href={`/leads/${lead.id}`}>{lead.name}</Link><div className="table-secondary">{lead.email}</div></td><td>{leadCompanyName(data, lead)}</td><td>{lead.service}</td><td><Badge tone={lead.status}>{lead.status}</Badge></td><td><span className="score-cell"><span>{lead.score}</span><span className="score-track"><span style={{ width: `${lead.score}%` }} /></span></span></td><td>{shortDate(lead.createdAt)}</td></tr>)}</tbody></table></div> : <EmptyState title="No leads yet" detail="New CRM leads will appear here." />}
       </Card>
       <Card><SectionHeading title="Activity feed" detail="Recent touches across the workspace" action={<Link className="text-link" href="/activities">View activity <ArrowRight size={13} /></Link>} />
-        <div className="activity-list">{recentActivity.map((item) => <div className="activity-feed-item" key={item.id}><span className="activity-feed-icon"><Activity size={13} /></span><div className="activity-feed-copy"><strong>{item.title}</strong><p>{item.type} · {ownerName(data, item.ownerId)}</p><small>{shortDate(item.dueAt)}</small></div></div>)}</div>
+        {recentActivity.length ? <div className="activity-list">{recentActivity.map((item) => <div className="activity-feed-item" key={item.id}><span className="activity-feed-icon"><Activity size={13} /></span><div className="activity-feed-copy"><strong>{item.title}</strong><p>{item.type} · {ownerName(data, item.ownerId)}</p><small>{shortDate(item.dueAt)}</small></div></div>)}</div> : <EmptyState title="No activity yet" detail="CRM activity will appear here." />}
       </Card>
     </div>
-    <p className="field-hint">Record totals use saved CRM data; the revenue trend remains illustrative.</p>
+    <p className="field-hint">Record totals and revenue use saved CRM data.</p>
   </div>;
 }

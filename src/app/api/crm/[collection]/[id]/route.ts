@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import {
   deleteCrmRecord,
   ensureCrmIndexes,
   getCrmRecord,
+  isRecordCollection,
   updateCrmRecord,
 } from "@/lib/crm-data";
 import { crmErrorResponse, readJsonBody } from "@/lib/crm-http";
 import { getDatabase } from "@/lib/mongodb";
 import { CrmValidationError } from "@/lib/crm-validation";
-import { getPublicDemoRecord, isRecordCollection } from "@/lib/public-demo";
 import {
   isPublicDemoReadOnly,
   publicDemoMutationStatus,
@@ -24,16 +24,13 @@ async function getRouteKeys(context: RouteContext) {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
+  await connection();
   try {
     const keys = await getRouteKeys(context);
-    if (isPublicDemoReadOnly()) {
-      const record = getPublicDemoRecord(keys.collection, keys.id);
-      if (!record) return NextResponse.json({ error: "CRM record not found." }, { status: 404 });
-      return NextResponse.json(record, { headers: { "Cache-Control": "no-store" } });
-    }
     const db = await getDatabase();
-    await ensureCrmIndexes(db);
-    return NextResponse.json(await getCrmRecord(db, keys.collection, keys.id));
+    return NextResponse.json(await getCrmRecord(db, keys.collection, keys.id), {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (error) {
     return crmErrorResponse(error);
   }
