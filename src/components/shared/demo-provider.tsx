@@ -11,7 +11,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import type { DemoData, RecordCollection } from "@/types/crm";
+import type { DemoData, Lead, RecordCollection } from "@/types/crm";
 
 const collections: RecordCollection[] = [
   "leads",
@@ -42,6 +42,7 @@ type PendingWrite = {
 type CrmContextValue = {
   data: DemoData;
   setData: Dispatch<SetStateAction<DemoData>>;
+  createLead: (lead: Lead) => Promise<Lead>;
   deleteRecord: (collection: RecordCollection, id: string) => Promise<boolean>;
   loading: boolean;
   saving: boolean;
@@ -146,6 +147,35 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     await loadData();
   }, [flushPending, loadData]);
 
+  const createLead = useCallback(async (lead: Lead) => {
+    setSaving(true);
+    try {
+      const response = await fetch("/api/crm/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lead),
+      });
+      if (!response.ok) throw new Error(await responseError(response));
+      const savedLead = await response.json() as Lead;
+      if (savedLead.id !== lead.id) {
+        throw new Error("The CRM server did not confirm the saved lead.");
+      }
+      const next = { ...dataRef.current, leads: [savedLead, ...dataRef.current.leads] };
+      dataRef.current = next;
+      setState(next);
+      setError("");
+      return savedLead;
+    } catch (createError) {
+      const message = createError instanceof TypeError
+        ? "Unable to reach the CRM server. Check your connection and try again."
+        : createError instanceof Error ? createError.message : "Unable to save the lead.";
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
   const deleteRecord = useCallback(async (collection: RecordCollection, id: string) => {
     setSaving(true);
     try {
@@ -217,7 +247,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   }, [flushPending]);
 
   return (
-    <CrmContext.Provider value={{ data, setData, deleteRecord, loading, saving, error, retry }}>
+    <CrmContext.Provider value={{ data, setData, createLead, deleteRecord, loading, saving, error, retry }}>
       {children}
     </CrmContext.Provider>
   );

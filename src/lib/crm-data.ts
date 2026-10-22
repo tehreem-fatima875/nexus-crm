@@ -8,6 +8,7 @@ import {
   CrmNotFoundError,
   CrmValidationError,
   mergeAndValidateRecord,
+  resolveLeadCompanyReference,
   validateId,
   validateRecord,
   type CrmRecord,
@@ -160,7 +161,17 @@ export async function getCrmRecord(db: Db, collection: RecordCollection, id: str
 }
 
 export async function createCrmRecord(db: Db, collection: RecordCollection, input: unknown): Promise<CrmRecord> {
-  const record = validateRecord(collection, input);
+  let record = validateRecord(collection, input);
+  if (collection === "leads") {
+    const lead = record as Lead;
+    if (lead.companyId) {
+      const company = await db.collection("companies").findOne(
+        { id: lead.companyId },
+        { projection: { _id: 1 } },
+      );
+      record = resolveLeadCompanyReference(lead, Boolean(company));
+    }
+  }
   const records = db.collection<Document>(collection);
   const matches = (document: Document | null) => {
     if (!document) return false;
@@ -176,7 +187,18 @@ export async function createCrmRecord(db: Db, collection: RecordCollection, inpu
   }
   await assertCrmReferences(db, collection, record);
   try {
-    await records.insertOne(record);
+    const result = await records.insertOne(record);
+    if (!result.acknowledged) {
+      throw new Error("MongoDB did not acknowledge the CRM insert.");
+    }
+    const inserted = await records.findOne(
+      { _id: result.insertedId },
+      { projection: { _id: 0 } },
+    );
+    if (!inserted || !matches(inserted)) {
+      throw new Error("MongoDB did not confirm the saved CRM record.");
+    }
+    return cleanDocument<CrmRecord>(inserted);
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === 11000) {
       if (matches(await records.findOne({ id: record.id }))) return record;

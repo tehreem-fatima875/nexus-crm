@@ -4,7 +4,7 @@ import { crmErrorResponse, readJsonBody } from "@/lib/crm-http";
 import { getDatabase } from "@/lib/mongodb";
 import { CrmValidationError, validateRecord } from "@/lib/crm-validation";
 import {
-  isPublicDemoReadOnly,
+  isPublicDemoMutationBlocked,
   publicDemoMutationStatus,
   publicDemoReadOnlyMessage,
 } from "@/lib/public-demo-policy.mjs";
@@ -31,11 +31,11 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  if (isPublicDemoReadOnly()) {
-    return NextResponse.json({ error: publicDemoReadOnlyMessage }, { status: publicDemoMutationStatus });
-  }
   try {
     const collection = await getCollectionName(context);
+    if (isPublicDemoMutationBlocked(collection)) {
+      return NextResponse.json({ error: publicDemoReadOnlyMessage }, { status: publicDemoMutationStatus });
+    }
     const input = await readJsonBody(request);
     validateRecord(collection, input);
     const db = await getDatabase();

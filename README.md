@@ -8,7 +8,7 @@ A CRM workspace for web development and digital marketing agencies, built with t
 2. Place `MONGODB_URI` in the ignored root `.env.local`. The app always selects only the `nexus_crm` database, regardless of the database name in the URI. Keep the URI server-side.
 3. Start the development server with `npm run dev` and open `http://localhost:3000`. No sign-in is required. Bind development servers to loopback only; local development routes can write to the configured `nexus_crm` database.
 
-The public demo has no sign-in. Both local and production CRM reads use the same `nexus_crm` database, and dashboards/reports are calculated from those records. Configure the server-only `MONGODB_URI` environment variable in Netlify using a MongoDB user that can read the `nexus_crm` database. The production API is read-only: create, update, and delete requests return HTTP 403. Local development retains MongoDB CRUD support.
+The public demo has no sign-in. Both local and production CRM reads use the same `nexus_crm` database, and dashboards/reports are calculated from those records. Configure the server-only `MONGODB_URI` environment variable in Netlify using a MongoDB user that can read CRM collections and insert leads in the `nexus_crm` database. Production lead creation is enabled; other create, update, and delete requests return HTTP 403. Local development retains MongoDB CRUD support.
 
 For Netlify, connect the repository and deploy the Next.js app using the site's normal build configuration. Set `MONGODB_URI` for the production deploy context (and deploy previews if they should display the same database). No `MONGODB_DB`, `MONGODB_URL`, or `NEXT_PUBLIC_*` database variable is used; the selected database is fixed to `nexus_crm` in server code.
 
@@ -25,7 +25,7 @@ For Netlify, connect the repository and deploy the Next.js app using the site's 
 - `/ai-assistant` — planned AI workflows and editable user-authored drafts; no AI provider is connected
 - `/settings` — local demo preferences and informational team/role settings
 
-The CRM API reads all records from MongoDB at `/api/crm`, `/api/crm/{leads,contacts,companies,deals,activities,projects}`, and `/api/crm/{collection}/{id}`. Production create, update, and delete operations are intentionally disabled. Local development API routes retain MongoDB CRUD support.
+The CRM API reads all records from MongoDB at `/api/crm`, `/api/crm/{leads,contacts,companies,deals,activities,projects}`, and `/api/crm/{collection}/{id}`. Production lead creation persists to MongoDB; other production create, update, and delete operations are intentionally disabled. Local development API routes retain MongoDB CRUD support.
 
 ## Security and production status
 

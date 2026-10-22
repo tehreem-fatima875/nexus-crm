@@ -11,6 +11,11 @@ export const shortDate = (value: string) => dateLabel(value, { month: "short", d
 export const ownerName = (data: DemoData, ownerId: string) =>
   data.owners.find((owner) => owner.id === ownerId)?.name ?? "Unassigned";
 
+export const ownerIdByName = (data: DemoData, name: string) => {
+  const normalizedName = name.trim().toLocaleLowerCase();
+  return data.owners.find((owner) => owner.name.trim().toLocaleLowerCase() === normalizedName)?.id;
+};
+
 export const companyName = (data: DemoData, companyId: string) =>
   data.companies.find((company) => company.id === companyId)?.name ?? "Unknown company";
 

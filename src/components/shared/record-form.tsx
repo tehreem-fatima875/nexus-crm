@@ -28,10 +28,11 @@ export function RecordForm({
   initialValues?: Record<string, string>;
   submitLabel?: string;
   onClose: () => void;
-  onSubmit: (values: Record<string, string>) => void;
+  onSubmit: (values: Record<string, string>) => void | Promise<void>;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field.name, initialValues[field.name] ?? ""])));
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
@@ -41,14 +42,23 @@ export function RecordForm({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     const missing = fields.find((field) => field.required && !values[field.name]?.trim());
     if (missing) {
       setError(`${missing.label} is required.`);
       return;
     }
-    onSubmit(values);
+    setError("");
+    setSaving(true);
+    try {
+      await onSubmit(values);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to save this CRM record.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -65,7 +75,7 @@ export function RecordForm({
           </div>)}</div>
           <p className="field-hint">Changes are saved to this CRM workspace.</p>
         </div>
-        <div className="modal-footer"><button className="button" type="button" onClick={onClose}>Cancel</button><button className="button button-primary" type="submit">{submitLabel}</button></div>
+        <div className="modal-footer"><button className="button" type="button" onClick={onClose} disabled={saving}>Cancel</button><button className="button button-primary" type="submit" disabled={saving}>{saving ? "Saving..." : submitLabel}</button></div>
       </form>
     </section>
   </div>;

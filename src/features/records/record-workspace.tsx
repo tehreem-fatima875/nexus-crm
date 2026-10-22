@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Plus, Search } from "luc
 import { RecordForm, type FormField } from "@/components/shared/record-form";
 import { useDemoStore } from "@/components/shared/demo-provider";
 import { Avatar, Badge, PageTitle } from "@/components/shared/ui";
-import { companyName, dateLabel, leadCompanyName, ownerName, shortDate } from "@/lib/format";
+import { companyName, dateLabel, leadCompanyName, ownerIdByName, ownerName, shortDate } from "@/lib/format";
 import type { Company, Contact, Lead, LeadStatus } from "@/types/crm";
 
 export type RecordKind = "leads" | "contacts" | "companies";
@@ -32,7 +32,8 @@ export function getRecordFields(kind: RecordKind, companyOptions: string[], owne
     { name: "name", label: "Full name", required: true }, { name: "role", label: "Role", required: true },
     { name: "email", label: "Email", type: "email", required: true }, { name: "phone", label: "Phone", type: "tel" },
     { name: "companyName", label: "Company", type: "select", required: true, options: companyOptions }, { name: "source", label: "Lead source", type: "select", options: ["Referral", "Website", "LinkedIn", "Content", "Event", "Organic search"] },
-    { name: "ownerName", label: "Owner", type: "select", required: true, options: ownerOptions }, { name: "notes", label: "Notes", type: "textarea", wide: true },
+{ name: "ownerName", label: "Owner", type: "text", required: true, placeholder: "Enter owner name" },
+{ name: "notes", label: "Notes", type: "textarea", wide: true },
   ];
   return [
     { name: "name", label: "Company name", required: true }, { name: "industry", label: "Industry", required: true },
@@ -43,7 +44,7 @@ export function getRecordFields(kind: RecordKind, companyOptions: string[], owne
 }
 
 export function RecordWorkspace({ kind, initialCreate = false }: { kind: RecordKind; initialCreate?: boolean }) {
-  const { data, setData } = useDemoStore();
+  const { data, setData, createLead } = useDemoStore();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All statuses");
   const [owner, setOwner] = useState("All owners");
@@ -95,17 +96,18 @@ export function RecordWorkspace({ kind, initialCreate = false }: { kind: RecordK
     setSort((current) => current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" });
   }
 
-  function createRecord(values: Record<string, string>) {
+  async function createRecord(values: Record<string, string>) {
     const id = `${kind.slice(0, 2)}${Date.now().toString(36)}`;
     const typedCompanyName = values.companyName?.trim() ?? "";
     const matchedCompany = kind === "leads"
       ? data.companies.find((item) => item.name.trim().toLowerCase() === typedCompanyName.toLowerCase())
       : data.companies.find((item) => item.name === values.companyName);
     const companyId = matchedCompany?.id ?? (kind === "leads" ? "" : data.companies[0]?.id ?? "");
-    const ownerId = data.owners.find((item) => item.name === values.ownerName)?.id ?? data.owners[0]?.id ?? "";
+    const ownerId = ownerIdByName(data, values.ownerName);
+    if (!ownerId) throw new Error("Enter the name of a configured workspace owner.");
     if (kind === "leads") {
       const lead: Lead = { id, name: values.name, email: values.email, phone: values.phone ?? "", companyId, companyName: typedCompanyName, service: values.service, source: values.source, status: (values.status || "New") as LeadStatus, score: 50, ownerId, createdAt: new Date().toISOString().slice(0, 10), budget: values.budget ?? "Not shared", requirements: values.requirements ?? "", notes: [] };
-      setData((current) => ({ ...current, leads: [lead, ...current.leads] }));
+      await createLead(lead);
     } else if (kind === "contacts") {
       const contact: Contact = { id, name: values.name, email: values.email, phone: values.phone ?? "", role: values.role, companyId, source: values.source || "Referral", ownerId, notes: values.notes ?? "" };
       setData((current) => ({ ...current, contacts: [contact, ...current.contacts] }));

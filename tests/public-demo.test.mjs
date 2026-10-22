@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  isPublicDemoMutationBlocked,
   isPublicDemoReadOnly,
   isPublicDemoRecordCollection,
   publicDemoMutationStatus,
@@ -28,8 +29,19 @@ test("public CRM endpoints allow only known record collection names", () => {
   assert.equal(isPublicDemoRecordCollection("unknown"), false);
 });
 
-test("blocks public create, update, and delete operations", () => {
+test("documents public lead creation and blocks other mutations", () => {
   assert.equal(publicDemoMutationStatus, 403);
   assert.match(publicDemoReadOnlyMessage, /read-only/i);
-  assert.match(publicDemoReadOnlyMessage, /not saved/i);
+  assert.match(publicDemoReadOnlyMessage, /except for creating leads/i);
+  const previousNodeEnv = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = "production";
+    assert.equal(isPublicDemoMutationBlocked("leads"), false);
+    assert.equal(isPublicDemoMutationBlocked("deals"), true);
+    process.env.NODE_ENV = "development";
+    assert.equal(isPublicDemoMutationBlocked("leads"), false);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
 });

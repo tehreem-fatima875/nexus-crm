@@ -140,6 +140,14 @@ export function validateRecord(collection: RecordCollection, input: unknown): Cr
   }
 }
 
+export function resolveLeadCompanyReference(lead: Lead, companyExists: boolean): Lead {
+  if (!lead.companyId || companyExists) return lead;
+  if (!lead.companyName?.trim()) {
+    throw new CrmValidationError("companyId does not reference an existing record.");
+  }
+  return { ...lead, companyId: "" };
+}
+
 export function mergeAndValidateRecord(
   collection: RecordCollection,
   current: CrmRecord,

@@ -64,7 +64,7 @@ export function SettingsPage() {
         </>}
         {tab === "roles" && <>
           <Card><SectionHeading title="Role overview" detail="Descriptions for the planned workspace roles." />{roles.map((role) => <div className="role-row" key={role.name}><span className="role-icon"><CircleUserRound size={15} /></span><span><strong>{role.name}</strong><small>{role.description}</small></span><Badge>Informational</Badge></div>)}</Card>
-          <div className="settings-boundary"><KeyRound size={15} /><span><strong>Public read-only demo</strong><small>CRM records are loaded from MongoDB. Production changes are disabled. Public create, update, and delete requests are disabled.</small></span></div>
+          <div className="settings-boundary"><KeyRound size={15} /><span><strong>Public demo access</strong><small>CRM records are loaded from MongoDB. Lead creation is enabled; other public create, update, and delete requests are disabled.</small></span></div>
         </>}
         {tab === "notifications" && <Card><SectionHeading title="Notification preferences" detail="These switches update the current page state only." />
           <div className="settings-row"><span><strong>Overdue follow-ups</strong><p>Show overdue activity reminders in the workspace header.</p></span><PreferenceToggle checked={preferences.overdue} label="Overdue follow-up notifications" onChange={(checked) => setPreferences((current) => ({ ...current, overdue: checked }))} /></div>
